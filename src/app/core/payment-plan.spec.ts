@@ -1,6 +1,7 @@
 import { Compounding, CreditAccount } from './account.model';
 import { monthlyRate } from './debt-math';
 import { amountFor, planPayments, projectPayoff, Strategy } from './payment-plan';
+import { monthKey } from './payment-schedule';
 
 function acct(id: string, balance: number, apr: number, minPayment: number, compounding: Compounding = 'daily365'): CreditAccount {
   return { id, name: id, balance, apr, compounding, creditLimit: 10000, minPayment, dueDay: null, colorSlot: null, createdAt: 0, updatedAt: 0 };
@@ -200,5 +201,92 @@ describe('projectPayoff', () => {
       expect(total('avalanche')).toBeLessThanOrEqual(total('level') + 1e-6);
     }
     expect(compared).toBeGreaterThan(200);
+  });
+});
+
+describe('new monthly spending', () => {
+  const card = (balance: number, apr: number, min: number, spending: number, extra: Partial<CreditAccount> = {}) => ({
+    ...acct('c' + balance, balance, apr, min, 'monthly'),
+    monthlySpending: spending,
+    ...extra,
+  });
+
+  it('adds new charges every month, with interest from mid-month while carrying a balance', () => {
+    // $1,000 at 1%/month, $100 new charges, paying $600:
+    // m1: 400 left, interest (400 + 50) × 1% = 4.50, next 504.50; m2: paid off.
+    const p = projectPayoff([card(1000, 12, 0, 100)], 600, 'avalanche');
+    expect(p.months).toBe(2);
+    expect(p.totalInterest).toBeCloseTo(4.5, 6);
+  });
+
+  it("pays a paid-off card's new charges in full each month, interest-free", () => {
+    const a = [card(100, 20, 0, 50), card(2000, 20, 0, 0)];
+    const plan = planPayments(a, 300, 'avalanche');
+    const small = plan.rows.findIndex((r) => r.account.id === 'c100');
+    // month 1 pays it off; afterwards it gets exactly its $50 of new charges
+    for (const m of plan.schedule.slice(1)) expect(m.payments[small]).toBeCloseTo(50, 2);
+    expect(plan.rows[small].payoffMonth).toBe(1);
+  });
+
+  it('never pays off when the amount does not keep up with the new charges', () => {
+    expect(projectPayoff([card(1000, 20, 25, 300)], 250, 'avalanche').paysOff).toBe(false);
+  });
+
+  it("includes half a month's new charges in next statement's interest", () => {
+    const plan = planPayments([card(1000, 12, 0, 100)], 600, 'avalanche');
+    expect(plan.interest).toBeCloseTo((400 + 50) * 0.01, 6);
+    expect(plan.spending).toBe(100);
+  });
+});
+
+describe('promotional rates', () => {
+  const promo = (end: number, aprAfter: number, deferred = false) => ({
+    promo: { endMonth: monthKey(end), aprAfter, deferred },
+  });
+
+  it('switches to the later rate after the promotion ends', () => {
+    // 0% through month 2, then 12% (1%/month); paying $100 a month
+    const a = [{ ...acct('p', 1000, 0, 0, 'monthly'), ...promo(2, 12) }];
+    const months = planPayments(a, 100, 'avalanche').schedule;
+    expect(months[0].interest).toBe(0);
+    expect(months[1].interest).toBe(0);
+    expect(months[2].interest).toBeCloseTo(7, 6); // 700 left × 1%
+  });
+
+  it('treats a promotion that already ended as the later rate', () => {
+    const a = [{ ...acct('p', 1000, 0, 0, 'monthly'), ...promo(-1, 12) }];
+    expect(planPayments(a, 100, 'avalanche').schedule[0].interest).toBeCloseTo(9, 6);
+  });
+
+  it('sets aside enough to clear a deferred-interest promotion before it ends', () => {
+    // Avalanche alone would put all extra on the 30% card and leave the 0% card for later.
+    const a = [
+      { ...acct('promo', 1200, 0, 25, 'monthly'), ...promo(3, 24, true) },
+      acct('high', 5000, 30, 100, 'monthly'),
+    ];
+    for (const s of ['avalanche', 'snowball', 'level'] as Strategy[]) {
+      const plan = planPayments(a, 600, s);
+      expect(plan.projection!.deferredCharges).toEqual([]);
+      expect(plan.rows.find((r) => r.account.id === 'promo')!.payoffMonth).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('charges the deferred interest when the balance is not cleared in time', () => {
+    // Only the $25 minimum goes to it: 1,175, 1,150 and 1,125 left in months 1-3.
+    // Deferred interest at 2%/month: (1175 + 1150 + 1125) × 2% = 69, charged in month 3.
+    const a = [
+      { ...acct('promo', 1200, 0, 25, 'monthly'), ...promo(3, 24, true) },
+      acct('high', 5000, 30, 100, 'monthly'),
+    ];
+    const plan = planPayments(a, 125, 'avalanche');
+    const charges = plan.projection!.deferredCharges;
+    expect(charges).toHaveLength(1);
+    expect(charges[0].month).toBe(3);
+    expect(charges[0].amount).toBeCloseTo(69, 6);
+  });
+
+  it('waives deferred interest when the card is paid off before the end', () => {
+    const a = [{ ...acct('promo', 300, 0, 25, 'monthly'), ...promo(3, 24, true) }];
+    expect(planPayments(a, 300, 'avalanche').projection!.deferredCharges).toEqual([]);
   });
 });

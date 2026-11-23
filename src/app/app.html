@@ -100,8 +100,25 @@
                 <th scope="row">
                   <span class="swatch" [style.background]="color(a)"></span>{{ a.name }}
                 </th>
-                <td class="num">{{ fmtUsd(a.balance) }}</td>
-                <td class="num">{{ fmtApr(a.apr) }}<span class="subline">{{ compoundingShort(a) }}</span></td>
+                <td class="num">
+                  {{ fmtUsd(a.balance) }}
+                  @if (a.monthlySpending) {
+                    <span class="subline">+{{ fmtUsd(a.monthlySpending) }}/mo new charges</span>
+                  }
+                </td>
+                <td class="num">
+                  {{ fmtApr(a.apr) }}
+                  @if (a.promo; as promo) {
+                    @if (promoEnded(a)) {
+                      <span class="subline critical-text">Promotion ended: update the APR</span>
+                    } @else {
+                      <span class="subline">
+                        until {{ promoEndLabel(a) }}, then {{ fmtApr(promo.aprAfter) }}@if (promo.deferred) {, deferred interest}
+                      </span>
+                    }
+                  }
+                  <span class="subline">{{ compoundingShort(a) }}</span>
+                </td>
                 <td class="num">{{ fmtApr(ear(a) * 100) }}</td>
                 <td class="num">{{ fmtUsd0(a.creditLimit) }}</td>
                 <td class="num">

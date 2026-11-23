@@ -46,3 +46,4 @@ tfoot th, tfoot td { font-weight: 600; border-bottom: none; border-top: 1px soli
   margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--grid);
   text-align: center; font-size: 0.8125rem; color: var(--text-muted);
 }
+.subline.critical-text { color: var(--critical-text); font-weight: 500; }

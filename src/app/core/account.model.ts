@@ -14,14 +14,31 @@ export const COMPOUNDING_OPTIONS: { value: Compounding; label: string; short: st
   { value: 'monthly', label: 'Monthly (APR ÷ 12)', short: 'Monthly' },
 ];
 
+/** A promotional rate (e.g. a 0% balance transfer). The account's `apr` is the promotional rate. */
+export interface Promotion {
+  /** Last month the promotional rate applies, 'YYYY-MM'. */
+  endMonth: string;
+  /** APR (%) after the promotion ends. */
+  aprAfter: number;
+  /**
+   * Deferred interest: if any of the balance is left when the promotion ends, the
+   * interest that would have accrued at `aprAfter` is charged all at once.
+   */
+  deferred: boolean;
+}
+
 /** A single credit card / revolving credit account. */
 export interface CreditAccount {
   id: string;
   name: string;
   /** Current balance owed, in dollars (d_i). */
   balance: number;
-  /** Nominal annual percentage rate, as a percent (e.g. 24.99 for 24.99%). */
+  /** Current nominal APR, as a percent (e.g. 24.99 for 24.99%). A promotional rate if `promo` is set. */
   apr: number;
+  /** Set when `apr` is a promotional rate with an end date. */
+  promo?: Promotion | null;
+  /** Expected new charges per month, in dollars (0 if not tracked). */
+  monthlySpending?: number;
   /** How the APR compounds. */
   compounding: Compounding;
   /** Total line of credit, in dollars. */

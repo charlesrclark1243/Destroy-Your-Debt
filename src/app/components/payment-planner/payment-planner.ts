@@ -135,6 +135,11 @@ export class PaymentPlanner {
     return monthLabel(k);
   }
 
+  /** "Jun 2027" for a promotion's 'YYYY-MM' end month. */
+  protected promoEnd(key: string): string {
+    return monthLabel(monthIndex(key));
+  }
+
   protected duration(months: number): string {
     if (months < 12) return `${months} ${months === 1 ? 'month' : 'months'}`;
     const y = Math.floor(months / 12);

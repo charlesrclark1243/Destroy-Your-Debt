@@ -19,10 +19,42 @@
       </label>
 
       <label>
-        <span>Interest rate (APR %)</span>
+        <span>{{ hasPromo() ? 'Current promotional APR (%)' : 'Interest rate (APR %)' }}</span>
         <input type="number" formControlName="apr" min="0" max="100" step="0.01" inputmode="decimal" />
         @if (invalid('apr')) { <small class="err">Enter an APR between 0 and 100.</small> }
       </label>
+
+      <div class="full promo">
+        <label class="check">
+          <input type="checkbox" formControlName="hasPromo" />
+          <span>Current APR is a promotional rate (e.g. a 0% balance transfer)</span>
+        </label>
+        @if (hasPromo()) {
+          <div class="promo-fields">
+            <label>
+              <span>Promotion ends after</span>
+              <select formControlName="promoEnd">
+                @for (m of promoMonths(); track m.key) {
+                  <option [value]="m.key">{{ m.label }}</option>
+                }
+              </select>
+              @if (promoEnded()) { <small class="err">This promotion has ended. Update the APR above to the current rate.</small> }
+            </label>
+            <label>
+              <span>APR after the promotion (%)</span>
+              <input type="number" formControlName="aprAfter" min="0" max="100" step="0.01" inputmode="decimal" />
+              @if (promoIncomplete() || invalid('aprAfter')) { <small class="err">Enter the APR after the promotion (0–100).</small> }
+            </label>
+            <label class="check full">
+              <input type="checkbox" formControlName="deferred" />
+              <span>
+                Deferred interest <em>(often "no interest if paid in full by…" store-card offers)</em>: if any balance
+                is left when it ends, the interest from the whole promotion is charged.
+              </span>
+            </label>
+          </div>
+        }
+      </div>
 
       <label class="full">
         <span>Interest compounding</span>
@@ -47,6 +79,12 @@
         <span>Minimum payment ($) <em>optional</em></span>
         <input type="number" formControlName="minPayment" min="0" step="0.01" inputmode="decimal" />
         @if (invalid('minPayment')) { <small class="err">Must be $0 or more.</small> }
+      </label>
+
+      <label>
+        <span>New charges per month ($) <em>optional</em></span>
+        <input type="number" formControlName="monthlySpending" min="0" step="0.01" inputmode="decimal" placeholder="0" />
+        @if (invalid('monthlySpending')) { <small class="err">Must be $0 or more.</small> }
       </label>
 
       <label>

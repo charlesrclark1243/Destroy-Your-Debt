@@ -4,13 +4,13 @@ h2 { margin: 0; font-size: 1.125rem; }
 .full { grid-column: 1 / -1; }
 label { display: flex; flex-direction: column; gap: 6px; font-size: 0.8125rem; color: var(--text-secondary); }
 label em { font-style: normal; color: var(--text-muted); }
-input, select {
+input:not([type='checkbox']), select {
   width: 100%; min-width: 0; box-sizing: border-box;
   font: inherit; font-size: 0.9375rem; color: var(--text-primary); background: var(--page);
   border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px;
 }
-input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: transparent; }
-input.ng-invalid.ng-touched { border-color: var(--critical); }
+input:not([type='checkbox']):focus, select:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: transparent; }
+input:not([type='checkbox']).ng-invalid.ng-touched { border-color: var(--critical); }
 .err { color: var(--critical-text); font-size: 0.75rem; }
 .note { margin: 14px 0 0; font-size: 0.8125rem; color: var(--text-secondary); }
 .note.warn { color: var(--text-primary); }
@@ -18,3 +18,14 @@ footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
 .hint { color: var(--text-muted); font-size: 0.75rem; line-height: 1.45; }
 .hint strong { color: var(--text-secondary); font-weight: 600; }
+
+.promo { display: flex; flex-direction: column; gap: 10px; }
+.check { flex-direction: row; align-items: flex-start; gap: 8px; color: var(--text-primary); font-size: 0.875rem; line-height: 1.4; }
+.check input { width: 16px; height: 16px; flex: none; margin: 1px 0 0; accent-color: var(--primary-bg); }
+.check input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.check em { font-style: normal; color: var(--text-muted); }
+.promo-fields {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px;
+  padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--hover-wash);
+}
+@media (max-width: 520px) { .promo-fields { grid-template-columns: 1fr; } }

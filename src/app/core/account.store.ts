@@ -6,6 +6,7 @@ import {
   CreditAccount,
   DEFAULT_PLANNER,
   PlannerSettings,
+  Promotion,
   SyncDoc,
   Tombstone,
 } from './account.model';
@@ -140,7 +141,14 @@ function clean(d: AccountDraft): AccountDraft {
     creditLimit: num(d.creditLimit),
     minPayment: num(d.minPayment),
     dueDay: d.dueDay == null || (d.dueDay as unknown) === '' ? null : Math.round(num(d.dueDay)),
+    monthlySpending: Math.max(0, num(d.monthlySpending)),
+    promo: cleanPromo(d.promo),
   };
+}
+
+function cleanPromo(p: AccountDraft['promo']): Promotion | null {
+  if (!p || !/^\d{4}-\d{2}$/.test(p.endMonth)) return null;
+  return { endMonth: p.endMonth, aprAfter: Math.min(100, Math.max(0, num(p.aprAfter))), deferred: !!p.deferred };
 }
 
 function validCompounding(v: unknown): Compounding {

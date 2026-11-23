@@ -11,6 +11,7 @@ import {
   weightedAverageApr,
 } from './core/debt-math';
 import { fmtApr, fmtPct, fmtUsd, fmtUsd0 } from './core/format';
+import { monthIndex, monthLabel } from './core/payment-schedule';
 import { DonutChart } from './components/donut-chart/donut-chart';
 import { AccountForm } from './components/account-form/account-form';
 import { ConfirmDialog } from './components/confirm-dialog/confirm-dialog';
@@ -81,6 +82,14 @@ export class App {
 
   protected ear(a: CreditAccount): number {
     return effectiveAnnualRate(a.apr, a.compounding);
+  }
+
+  protected promoEnded(a: CreditAccount): boolean {
+    return !!a.promo && monthIndex(a.promo.endMonth) < 1;
+  }
+
+  protected promoEndLabel(a: CreditAccount): string {
+    return a.promo ? monthLabel(monthIndex(a.promo.endMonth)) : '';
   }
 
   protected compoundingShort(a: CreditAccount): string {

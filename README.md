@@ -9,8 +9,9 @@ own Google Drive.
 ## Features
 
 - **Accounts:** add, update and delete cards with balance, APR, compounding method, credit line,
-  minimum payment and due day. Shows utilization per card and overall, and flags cards over
-  their limit.
+  minimum payment, due day and expected new charges per month. Promotional rates (such as a 0%
+  balance transfer) can have an end date, a later APR, and deferred interest. Shows utilization per
+  card and overall, and flags cards over their limit and promotions that have ended.
 - **Summary:** total debt, utilization, balance-weighted average APR, next statement's interest,
   and total minimum payments.
 - **Two charts:** each card's share of your total **debt**, and each card's share of next
@@ -74,10 +75,27 @@ Each account has a compounding method, which turns its nominal APR into the effe
 
 Check your card agreement for the "daily periodic rate" if you're not sure.
 
+### Promotional rates
+
+If a card's current APR is a promotion, tick **Current APR is a promotional rate** and enter the
+month it ends and the APR afterwards. The charts and summary use the current rate; the payment
+planner switches to the later rate after the end month.
+
+Tick **Deferred interest** for offers like "no interest if paid in full by…" (common on store
+cards): if any balance is left when the promotion ends, the interest that would have accrued at
+the later rate is charged all at once. The planner estimates this from today on, since interest a
+promotion built up before today isn't known.
+
 ## Payment planner
 
-Enter a regular monthly amount and pick a strategy. Every strategy pays all minimums first; they
-differ in where the rest goes:
+Enter a regular monthly amount and pick a strategy. Every strategy does the same three things
+first, in this order:
+
+1. pays every card's minimum;
+2. pays new charges in full on cards that are already paid off, so they stay interest-free;
+3. sets aside enough each month to clear deferred-interest promotions before they end.
+
+They differ in where the rest goes:
 
 | Strategy | Where the extra goes |
 |---|---|
@@ -102,13 +120,24 @@ amounts. The unit tests check this on hundreds of random sets of cards. The othe
 trade some interest for other goals. Money paid earlier saves more than the same money paid
 later, so a lump sum is worth applying as soon as you have it.
 
-If this month's amount doesn't cover all minimums, the planner warns you, covers minimums in the
-strategy's order, and skips the projection. If a later month doesn't cover the minimums due then,
-the projection stops at that month and says which one.
+**New charges:** each card's expected new charges are added every month. While a card carries a
+balance, new charges accrue interest from mid-month (there's no grace period); once it's paid off,
+the plan pays its new charges in full each month. "Debt-free" means no card carries a balance
+from one month to the next. After that, keep paying your new charges in full.
 
-**Assumptions:** payments post at the start of the billing cycle, rates and minimums stay the
-same, and there are no new charges. The planner doesn't model fees, promotional rates ending
-(especially deferred-interest offers), or rewards.
+The planner warns you when:
+
+- this month's amount doesn't cover all minimums (it covers them in the strategy's order and skips
+  the projection);
+- a later month doesn't cover the minimums due then (the projection stops at that month);
+- the amounts never pay the balances off, because they don't keep up with interest and new
+  charges;
+- a deferred-interest promotion will end with a balance left, with the estimated interest charged
+  and the month.
+
+**Assumptions:** payments post at the start of the billing cycle, new charges are spread evenly
+through each month, and rates (apart from promotions ending) and minimums stay the same. The
+planner doesn't model fees or rewards.
 
 ## Google Drive sync
 

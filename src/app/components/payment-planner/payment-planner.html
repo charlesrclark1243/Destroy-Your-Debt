@@ -3,8 +3,9 @@
   <h2 id="planner-title">Split this month's payment</h2>
   <p class="caption">
     Enter how much you can pay each month, add any months that will be different, and pick a strategy. Every strategy
-    pays all minimums first; they differ in where the rest goes. The projection follows your amounts until you're
-    debt-free.
+    pays all minimums first, keeps paid-off cards clear of new charges, and sets aside enough to clear
+    deferred-interest promotions before they end; they differ in where the rest goes. The projection follows your
+    amounts, new charges and promotional rates until you're debt-free.
   </p>
 
   <div class="controls">
@@ -102,8 +103,18 @@
     } @else if (p.projection && !p.projection.paysOff) {
       <p class="alert" role="alert">
         <span class="icon critical" aria-hidden="true">▲</span>
-        At these amounts, the balances never get paid off: the interest keeps up with the payments. Try a larger
-        amount.
+        At these amounts, the balances never get paid off: the payments don't keep up with the interest{{
+          p.spending ? ' and new charges' : ''
+        }}. Try a larger amount.
+      </p>
+    }
+
+    @for (d of p.projection?.deferredCharges ?? []; track d.account.id) {
+      <p class="alert" role="alert">
+        <span class="icon critical" aria-hidden="true">▲</span>
+        {{ d.account.name }}'s deferred-interest promotion ends with a balance left, so about {{ fmtUsd(d.amount) }} of
+        deferred interest is charged in {{ monthName(d.month) }}. The amounts above can't clear it in time. Paying more
+        before then avoids it.
       </p>
     }
 
@@ -151,7 +162,12 @@
           @for (r of p.rows; track r.account.id) {
             <tr>
               <th scope="row"><span class="swatch" [style.background]="color(r.account)"></span>{{ r.account.name }}</th>
-              <td class="num">{{ fmtApr(r.account.apr) }}</td>
+              <td class="num">
+                {{ fmtApr(r.account.apr) }}
+                @if (r.account.promo; as promo) {
+                  <span class="subline">until {{ promoEnd(promo.endMonth) }}, then {{ fmtApr(promo.aprAfter) }}</span>
+                }
+              </td>
               <td class="num">{{ fmtUsd(r.account.balance) }}</td>
               <td class="num">{{ r.minimum ? fmtUsd(r.minimum) : '—' }}</td>
               <td class="num pay">{{ fmtUsd(r.payment) }}</td>
@@ -192,6 +208,12 @@
         That pays off every card, with {{ fmtUsd(p.leftover) }} left over.
       </p>
     }
+    @if (p.spending > 0 && p.projection?.paysOff) {
+      <p class="note">
+        Includes {{ fmtUsd(p.spending) }} a month of new charges. Once you're debt-free, keep paying them in full each
+        month to stay interest-free.
+      </p>
+    }
 
     @if (p.schedule.length > 1) {
       <details class="schedule">
@@ -206,6 +228,9 @@
                   <th scope="col" class="num">
                     <span class="swatch" [style.background]="color(r.account)"></span>{{ r.account.name }}
                   </th>
+                }
+                @if (p.spending > 0) {
+                  <th scope="col" class="num">New charges</th>
                 }
                 <th scope="col" class="num">Interest</th>
                 <th scope="col" class="num">Still owed</th>
@@ -223,6 +248,9 @@
                   </td>
                   @for (x of m.payments; track $index) {
                     <td class="num" [class.muted]="x === 0">{{ x ? fmtUsd(x) : '—' }}</td>
+                  }
+                  @if (p.spending > 0) {
+                    <td class="num">{{ fmtUsd(m.charges) }}</td>
                   }
                   <td class="num">{{ fmtUsd(m.interest) }}</td>
                   <td class="num">{{ m.owedAfter > 0.005 ? fmtUsd(m.owedAfter) : 'Paid off' }}</td>
@@ -283,8 +311,9 @@
   }
 
   <p class="footnote">
-    Assumes each payment posts at the start of the billing cycle, you pay the amounts above, rates and minimums stay
-    the same, and there are no new charges. It doesn't account for promotional rates ending (especially deferred-interest offers), fees, or
+    Assumes each payment posts at the start of the billing cycle, you pay the amounts above, new charges are spread
+    evenly through each month, and rates (apart from promotions ending) and minimums stay the same. Deferred interest
+    is estimated from now on; interest a promotion built up before today isn't known. It doesn't account for fees or
     rewards.
   </p>
 </section>
