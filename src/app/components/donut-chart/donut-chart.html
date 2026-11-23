@@ -1,0 +1,68 @@
+<figure class="card donut">
+  <figcaption>
+    @if (eyebrow()) {
+      <span class="eyebrow">{{ eyebrow() }}</span>
+    }
+    <h2>{{ heading() }}</h2>
+    @if (caption()) {
+      <p class="caption">{{ caption() }}</p>
+    }
+  </figcaption>
+
+  @if (slices().length === 0) {
+    <p class="empty">{{ emptyText() }}</p>
+  } @else {
+    <div class="body">
+      <div class="plot" #host (mouseleave)="clear()">
+        <svg
+          [attr.viewBox]="'0 0 ' + size + ' ' + size"
+          role="img"
+          [attr.aria-label]="heading() + ': ' + slices().length + ' accounts'"
+        >
+          @for (s of slices(); track s.key) {
+            <path
+              class="seg"
+              [class.dim]="hovered() && hovered() !== s.key"
+              [attr.d]="s.path"
+              fill-rule="evenodd"
+              [style.fill]="s.color"
+              (mousemove)="onMove($event, s.key, host)"
+            />
+          }
+          <text class="center-value" [attr.x]="c" [attr.y]="c - 2" text-anchor="middle">
+            {{ active() ? pct(active()!.share) : centerValue() }}
+          </text>
+          <text class="center-label" [attr.x]="c" [attr.y]="c + 20" text-anchor="middle">
+            {{ active() ? active()!.name : centerLabel() }}
+          </text>
+        </svg>
+
+        @if (active() && tip(); as t) {
+          <div class="tooltip" [style.left.px]="t.x" [style.top.px]="t.y" role="status">
+            <div class="tt-name"><span class="swatch" [style.background]="active()!.color"></span>{{ active()!.name }}</div>
+            <div class="tt-row"><span>Share</span><strong>{{ pct(active()!.share) }}</strong></div>
+            <div class="tt-row"><span>{{ valueLabel() }}</span><strong>{{ active()!.valueText }}</strong></div>
+          </div>
+        }
+      </div>
+
+      <ul class="legend">
+        @for (s of slices(); track s.key) {
+          <li
+            tabindex="0"
+            [class.active]="hovered() === s.key"
+            (mouseenter)="hovered.set(s.key)"
+            (mouseleave)="clear()"
+            (focus)="hovered.set(s.key)"
+            (blur)="clear()"
+          >
+            <span class="swatch" [style.background]="s.color"></span>
+            <span class="name">{{ s.name }}</span>
+            <span class="share">{{ pct(s.share) }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+  <ng-content />
+</figure>

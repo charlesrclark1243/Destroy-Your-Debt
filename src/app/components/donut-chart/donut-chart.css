@@ -1,0 +1,39 @@
+:host { display: block; min-width: 0; }
+.donut { margin: 0; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.eyebrow {
+  display: block; margin-bottom: 4px; font-size: 0.6875rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
+}
+h2 { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+.caption { margin: 4px 0 0; font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.4; }
+.empty { color: var(--text-muted); padding: 48px 0; text-align: center; margin: 0; }
+.body { display: flex; align-items: center; gap: 24px; margin-top: 16px; flex-wrap: wrap; }
+.plot { position: relative; width: 220px; flex: 0 0 220px; }
+svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+/* 2px surface-colored gap between adjacent segments */
+.seg { stroke: var(--surface-1); stroke-width: 2px; stroke-linejoin: round; cursor: pointer; transition: opacity 120ms; }
+.seg.dim { opacity: 0.35; }
+
+.center-value { font-size: 26px; font-weight: 600; fill: var(--text-primary); }
+.center-label { font-size: 12px; fill: var(--text-secondary); }
+
+.tooltip {
+  position: absolute; transform: translate(12px, -50%); pointer-events: none; z-index: 2;
+  background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 8px 10px; font-size: 12px; min-width: 150px; white-space: nowrap;
+}
+.tt-name { display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px; }
+.tt-row { display: flex; justify-content: space-between; gap: 16px; color: var(--text-secondary); }
+.tt-row strong { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.legend { list-style: none; margin: 0; padding: 0; flex: 1 1 160px; min-width: 160px; display: grid; gap: 2px; }
+.legend li {
+  display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 6px; font-size: 0.875rem; color: var(--text-primary); cursor: default; outline: none;
+}
+.legend li.active, .legend li:focus-visible { background: var(--hover-wash); }
+.legend .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend .share { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }

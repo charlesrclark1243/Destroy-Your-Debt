@@ -1,0 +1,48 @@
+<div class="sync" role="status" aria-live="polite">
+  @switch (sync.state()) {
+    @case ('unconfigured') {
+      <span class="text">Saved in this browser</span>
+    }
+    @case ('signed-out') {
+      <span class="text">Saved in this browser only</span>
+      <button type="button" class="btn small" (click)="sync.signIn()">Sign in with Google to sync</button>
+    }
+    @case ('connecting') {
+      <span class="text"><span class="icon spin" aria-hidden="true">◌</span> Connecting to Google…</span>
+    }
+    @case ('syncing') {
+      <span class="text"><span class="icon spin" aria-hidden="true">◌</span> Syncing with {{ sync.email() }}…</span>
+    }
+    @case ('synced') {
+      <span class="text"><span class="icon good" aria-hidden="true">●</span> Synced to {{ sync.email() }}'s Google Drive@if (time()) { · {{ time() }} }</span>
+      <button type="button" class="btn small" (click)="confirmSignOut.set(true)">Sign out</button>
+    }
+    @case ('paused') {
+      <span class="text"><span class="icon warn" aria-hidden="true">▲</span> Sync paused: Google sign-in expired. Changes are saved in this browser.</span>
+      <button type="button" class="btn small" (click)="sync.signIn()">Reconnect</button>
+    }
+    @case ('offline') {
+      <span class="text"><span class="icon warn" aria-hidden="true">▲</span> Offline. Changes are saved in this browser and will sync when you're back online.</span>
+    }
+    @case ('error') {
+      <span class="text"><span class="icon critical" aria-hidden="true">▲</span> Sync problem: {{ sync.error() }}</span>
+      <button type="button" class="btn small" (click)="sync.email() ? sync.sync() : sync.signIn()">Retry</button>
+    }
+  }
+</div>
+
+@if (choice(); as c) {
+  <app-choice-dialog [heading]="c.heading" [paragraphs]="c.paragraphs" [actions]="c.actions" (chosen)="onChoice($event)" />
+}
+
+@if (confirmSignOut()) {
+  <app-choice-dialog
+    heading="Sign out of sync?"
+    [paragraphs]="[
+      'Your data stays in your Google Drive either way.',
+      'On a shared computer, remove it from this browser so the next person cannot see it.'
+    ]"
+    [actions]="signOutActions"
+    (chosen)="onSignOut($event)"
+  />
+}

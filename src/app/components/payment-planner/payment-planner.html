@@ -1,0 +1,290 @@
+<section class="card planner" aria-labelledby="planner-title">
+  <span class="eyebrow">Payment planner</span>
+  <h2 id="planner-title">Split this month's payment</h2>
+  <p class="caption">
+    Enter how much you can pay each month, add any months that will be different, and pick a strategy. Every strategy
+    pays all minimums first; they differ in where the rest goes. The projection follows your amounts until you're
+    debt-free.
+  </p>
+
+  <div class="controls">
+    <div class="budget">
+      <label for="planner-budget">Regular monthly amount</label>
+      <div class="money">
+        <span aria-hidden="true">$</span>
+        <input
+          id="planner-budget"
+          type="number"
+          min="0"
+          step="0.01"
+          inputmode="decimal"
+          placeholder="0.00"
+          [value]="budget() ?? ''"
+          (input)="onBudget($any($event.target).value)"
+        />
+      </div>
+      <small>Your minimum payments total {{ fmtUsd(totalMinimums()) }}.</small>
+    </div>
+
+    <fieldset class="strategy">
+      <legend>Strategy</legend>
+      <div class="segments" role="radiogroup">
+        @for (s of strategies; track s.value) {
+          <label class="segment" [class.selected]="strategy() === s.value">
+            <input
+              type="radio"
+              name="planner-strategy"
+              [value]="s.value"
+              [checked]="strategy() === s.value"
+              (change)="setStrategy(s.value)"
+            />
+            {{ s.label }}
+          </label>
+        }
+      </div>
+      <small>{{ selectedInfo().description }}</small>
+    </fieldset>
+  </div>
+
+  <div class="changes">
+    <span class="changes-title">Months with a different amount</span>
+    @for (c of changes(); track c.id) {
+      <div class="change">
+        <select
+          aria-label="Kind of change"
+          [value]="c.kind"
+          (change)="updateChange(c.id, { kind: $any($event.target).value })"
+        >
+          <option value="once" [selected]="c.kind === 'once'">Only in</option>
+          <option value="from" [selected]="c.kind === 'from'">Every month from</option>
+        </select>
+        <select aria-label="Month" (change)="updateChange(c.id, { month: $any($event.target).value })">
+          @for (o of optionsFor(c); track o.key) {
+            <option [value]="o.key" [selected]="o.key === c.month">{{ o.label }}</option>
+          }
+        </select>
+        <div class="money small">
+          <span aria-hidden="true">$</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputmode="decimal"
+            placeholder="Amount"
+            aria-label="Amount for that month"
+            [value]="c.amount ?? ''"
+            (input)="updateChange(c.id, { amount: $any($event.target).value })"
+          />
+        </div>
+        <button type="button" class="btn small" (click)="removeChange(c.id)" aria-label="Remove this change">Remove</button>
+        @if (isPast(c)) {
+          <small class="muted">This month has passed, so it's ignored.</small>
+        }
+      </div>
+    }
+    <button type="button" class="btn small add" (click)="addChange()">+ Add a month</button>
+  </div>
+
+  @if (plan(); as p) {
+    @if (p.shortfall > 0) {
+      <p class="alert" role="alert">
+        <span class="icon critical" aria-hidden="true">▲</span>
+        This is {{ fmtUsd(p.shortfall) }} short of your minimum payments. Missing a minimum can mean late fees and a
+        higher penalty APR, which this plan can't account for, so there's no payoff projection. The plan covers
+        minimums in the strategy's order. If you can, contact the card issuers before the due dates.
+      </p>
+    } @else if (p.projection?.shortMonth; as sm) {
+      <p class="alert" role="alert">
+        <span class="icon critical" aria-hidden="true">▲</span>
+        In {{ monthName(sm.month) }}, {{ fmtUsd(sm.amount) }} doesn't cover the minimums due then
+        ({{ fmtUsd(sm.minimums) }}), so the projection stops there. Raise that month's amount to see the full plan.
+      </p>
+    } @else if (p.projection && !p.projection.paysOff) {
+      <p class="alert" role="alert">
+        <span class="icon critical" aria-hidden="true">▲</span>
+        At these amounts, the balances never get paid off: the interest keeps up with the payments. Try a larger
+        amount.
+      </p>
+    }
+
+    @if (p.projection?.paysOff) {
+      <div class="figures">
+        <div class="figure">
+          <span class="label">Total interest until debt-free</span>
+          <span class="value">{{ fmtUsd(p.projection!.totalInterest) }}</span>
+          @if (isCheapest(p.projection!)) {
+            <span class="delta good"><span aria-hidden="true">✓</span> Lowest total interest</span>
+          } @else {
+            <span class="delta cost">{{ fmtUsd(extraCost(p.projection!)!) }} more than the cheapest strategy</span>
+          }
+        </div>
+        <div class="figure">
+          <span class="label">Debt-free</span>
+          <span class="value">{{ monthName(p.projection!.months) }}</span>
+          <span class="delta neutral">in {{ duration(p.projection!.months) }}</span>
+        </div>
+        <div class="figure">
+          <span class="label">Next statement's interest</span>
+          <span class="value muted">{{ fmtUsd(p.interest) }}</span>
+        </div>
+      </div>
+    }
+
+    <h3>This month{{ variable() ? ' (' + fmtUsd(p.budget) + ')' : '' }}</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Account</th>
+            <th scope="col" class="num">APR</th>
+            <th scope="col" class="num">Balance</th>
+            <th scope="col" class="num">Minimum</th>
+            <th scope="col" class="num pay">Pay</th>
+            <th scope="col" class="num">Balance after</th>
+            <th scope="col" class="num">Next statement's<br />interest</th>
+            @if (p.projection?.paysOff) {
+              <th scope="col" class="num">Paid off</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of p.rows; track r.account.id) {
+            <tr>
+              <th scope="row"><span class="swatch" [style.background]="color(r.account)"></span>{{ r.account.name }}</th>
+              <td class="num">{{ fmtApr(r.account.apr) }}</td>
+              <td class="num">{{ fmtUsd(r.account.balance) }}</td>
+              <td class="num">{{ r.minimum ? fmtUsd(r.minimum) : '—' }}</td>
+              <td class="num pay">{{ fmtUsd(r.payment) }}</td>
+              <td class="num">{{ fmtUsd(r.balanceAfter) }}</td>
+              <td class="num">{{ fmtUsd(r.interestAfter) }}</td>
+              @if (p.projection?.paysOff) {
+                <td class="num">
+                  @if (r.payoffMonth === 1) {
+                    <span class="paid"><span aria-hidden="true">✓</span> This month</span>
+                  } @else if (r.payoffMonth) {
+                    {{ monthName(r.payoffMonth) }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row">Total</th>
+            <td></td>
+            <td class="num">{{ fmtUsd(sum(p.rows, 'balance')) }}</td>
+            <td class="num">{{ fmtUsd(p.totalMinimums) }}</td>
+            <td class="num pay">{{ fmtUsd(p.totalPaid) }}</td>
+            <td class="num">{{ fmtUsd(sum(p.rows, 'balanceAfter')) }}</td>
+            <td class="num">{{ fmtUsd(p.interest) }}</td>
+            @if (p.projection?.paysOff) {
+              <td class="num">{{ monthName(p.projection!.months) }}</td>
+            }
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    @if (p.leftover > 0) {
+      <p class="note">
+        <span class="icon good" aria-hidden="true">●</span>
+        That pays off every card, with {{ fmtUsd(p.leftover) }} left over.
+      </p>
+    }
+
+    @if (p.schedule.length > 1) {
+      <details class="schedule">
+        <summary>Month-by-month plan ({{ duration(p.schedule.length) }})</summary>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Month</th>
+                <th scope="col" class="num">Amount</th>
+                @for (r of p.rows; track r.account.id) {
+                  <th scope="col" class="num">
+                    <span class="swatch" [style.background]="color(r.account)"></span>{{ r.account.name }}
+                  </th>
+                }
+                <th scope="col" class="num">Interest</th>
+                <th scope="col" class="num">Still owed</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of p.schedule; track m.month) {
+                <tr [class.changed]="m.amount !== budget()">
+                  <th scope="row">{{ monthName(m.month) }}</th>
+                  <td class="num">
+                    {{ fmtUsd(m.paid) }}
+                    @if (m.paid < m.amount - 0.005) {
+                      <span class="muted">of {{ fmtUsd(m.amount) }}</span>
+                    }
+                  </td>
+                  @for (x of m.payments; track $index) {
+                    <td class="num" [class.muted]="x === 0">{{ x ? fmtUsd(x) : '—' }}</td>
+                  }
+                  <td class="num">{{ fmtUsd(m.interest) }}</td>
+                  <td class="num">{{ m.owedAfter > 0.005 ? fmtUsd(m.owedAfter) : 'Paid off' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </details>
+    }
+
+    @if (p.comparison; as comparison) {
+      <h3>Compare strategies {{ variable() ? 'with these amounts' : 'at ' + fmtUsd(p.budget) + ' a month' }}</h3>
+      <div class="table-wrap">
+        <table class="compare">
+          <thead>
+            <tr>
+              <th scope="col">Strategy</th>
+              <th scope="col" class="num">Total interest</th>
+              <th scope="col" class="num">Debt-free</th>
+              <th scope="col" class="num">Compared with cheapest</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of comparison; track c.strategy) {
+              <tr [class.current]="c.strategy === p.strategy">
+                <th scope="row">
+                  <button type="button" class="link" (click)="setStrategy(c.strategy)" [attr.aria-pressed]="c.strategy === p.strategy">
+                    {{ label(c.strategy) }}
+                  </button>
+                  @if (c.strategy === p.strategy) {
+                    <span class="tag">Selected</span>
+                  }
+                </th>
+                @if (c.shortMonth) {
+                  <td class="num muted" colspan="3">{{ monthName(c.shortMonth.month) }} doesn't cover the minimums</td>
+                } @else if (c.paysOff) {
+                  <td class="num">{{ fmtUsd(c.totalInterest) }}</td>
+                  <td class="num">{{ monthName(c.months) }} <span class="muted">({{ duration(c.months) }})</span></td>
+                  <td class="num">
+                    @if (isCheapest(c)) {
+                      <span class="paid"><span aria-hidden="true">✓</span> Cheapest</span>
+                    } @else {
+                      +{{ fmtUsd(extraCost(c)!) }}
+                    }
+                  </td>
+                } @else {
+                  <td class="num muted" colspan="3">Never paid off at this amount</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  } @else if (budget() != null && budget()! > 0) {
+    <p class="note">No balances to pay.</p>
+  }
+
+  <p class="footnote">
+    Assumes each payment posts at the start of the billing cycle, you pay the amounts above, rates and minimums stay
+    the same, and there are no new charges. It doesn't account for promotional rates ending (especially deferred-interest offers), fees, or
+    rewards.
+  </p>
+</section>

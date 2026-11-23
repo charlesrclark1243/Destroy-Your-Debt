@@ -1,0 +1,162 @@
+<main class="viz-root">
+  <header class="top">
+    <div>
+      <div class="brand">
+        <img class="logo" src="favicon.svg" alt="" width="31" height="48" />
+        <h1>Destroy Your Debt</h1>
+      </div>
+      <p class="sub">{{ accounts().length }} {{ accounts().length === 1 ? 'account' : 'accounts' }}</p>
+      <app-sync-status />
+    </div>
+    <button type="button" class="btn primary" (click)="openAdd()">+ Add account</button>
+  </header>
+
+  @if (store.isEmpty()) {
+    <section class="card empty-state">
+      <h2>No accounts yet</h2>
+      <p>Add your first credit card to see how your debt breaks down.</p>
+      <div class="row">
+        <button type="button" class="btn primary" (click)="openAdd()">+ Add account</button>
+        <button type="button" class="btn" (click)="store.loadSample()">Load sample accounts</button>
+      </div>
+    </section>
+  } @else {
+    <section class="tiles" aria-label="Summary">
+      <div class="card tile">
+        <span class="label">Total debt</span>
+        <span class="value">{{ fmtUsd0(total()) }}</span>
+        <span class="meta">across {{ totalLimit() > 0 ? fmtUsd0(totalLimit()) : '—' }} of credit</span>
+      </div>
+      <div class="card tile">
+        <span class="label">Utilization</span>
+        <span class="value">{{ fmtPct(util()) }}</span>
+        <span class="meta">
+          @if (util() > 0.3) { <span class="status serious"><span class="icon" aria-hidden="true">▲</span> Above 30%</span> } @else { <span class="status good"><span aria-hidden="true">●</span> At or below 30%</span> }
+        </span>
+      </div>
+      <div class="card tile">
+        <span class="label">Avg. APR (balance-weighted)</span>
+        <span class="value">{{ fmtApr(avgApr()) }}</span>
+        <span class="meta">≈ {{ fmtUsd(monthlyInterest()) }} next statement's interest</span>
+      </div>
+      <div class="card tile">
+        <span class="label">Minimum payments</span>
+        <span class="value">{{ fmtUsd0(totalMin()) }}</span>
+        <span class="meta">due per month</span>
+      </div>
+    </section>
+
+    <section class="charts">
+      <app-donut-chart
+        eyebrow="Measures debt"
+        heading="Share of total debt"
+        caption="How your balances are split across accounts: dᵢ / Σ dⱼ."
+        [rows]="plainShares()"
+        [centerValue]="fmtUsd0(total())"
+        centerLabel="total debt"
+        [formatValue]="fmtUsd"
+        valueLabel="Balance"
+        emptyText="All balances are $0."
+      />
+      <app-donut-chart
+        eyebrow="Measures interest, not debt"
+        heading="Share of next statement's interest"
+        caption="Where the interest on your next statement comes from, at current balances using each card's APR and compounding: mᵢ / Σ mⱼ."
+        [rows]="interest()"
+        [centerValue]="fmtUsd0(monthlyInterest())"
+        centerLabel="next statement"
+        [formatValue]="fmtUsd"
+        valueLabel="Next statement"
+        emptyText="No balances are accruing interest."
+      >
+        @if (zeroAprNames()) {
+          <p class="footnote">ⓘ 0% APR, accrues no interest: {{ zeroAprNames() }}</p>
+        }
+      </app-donut-chart>
+    </section>
+
+    <section class="card table-card">
+      <h2>Accounts</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Account</th>
+              <th scope="col" class="num">Balance</th>
+              <th scope="col" class="num">APR<span class="subline">compounding</span></th>
+              <th scope="col" class="num">Effective rate</th>
+              <th scope="col" class="num">Credit line</th>
+              <th scope="col" class="num">Utilization</th>
+              <th scope="col" class="num">Min. payment</th>
+              <th scope="col" class="num">Due</th>
+              <th scope="col" class="num">Share of<br />debt</th>
+              <th scope="col" class="num">Share of<br />interest</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of accounts(); track a.id) {
+              <tr>
+                <th scope="row">
+                  <span class="swatch" [style.background]="color(a)"></span>{{ a.name }}
+                </th>
+                <td class="num">{{ fmtUsd(a.balance) }}</td>
+                <td class="num">{{ fmtApr(a.apr) }}<span class="subline">{{ compoundingShort(a) }}</span></td>
+                <td class="num">{{ fmtApr(ear(a) * 100) }}</td>
+                <td class="num">{{ fmtUsd0(a.creditLimit) }}</td>
+                <td class="num">
+                  {{ fmtPct(rowUtil(a)) }}
+                  @if (a.creditLimit > 0 && a.balance > a.creditLimit) { <span class="status critical" title="Over limit">▲ over</span> }
+                </td>
+                <td class="num">{{ a.minPayment ? fmtUsd(a.minPayment) : '—' }}</td>
+                <td class="num">{{ a.dueDay ?? '—' }}</td>
+                <td class="num">{{ shareById().has(a.id) ? fmtPct(shareById().get(a.id)!) : '—' }}</td>
+                <td class="num">{{ fmtPct(interestShareById().get(a.id) ?? 0) }}</td>
+                <td class="actions">
+                  <button type="button" class="btn small" (click)="openEdit(a)" [attr.aria-label]="'Update ' + a.name">Update</button>
+                  <button type="button" class="btn small danger-ghost" (click)="pendingDelete.set(a)" [attr.aria-label]="'Delete ' + a.name">Delete</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">Total</th>
+              <td class="num">{{ fmtUsd(total()) }}</td>
+              <td class="num">{{ fmtApr(avgApr()) }}</td>
+              <td></td>
+              <td class="num">{{ fmtUsd0(totalLimit()) }}</td>
+              <td class="num">{{ fmtPct(util()) }}</td>
+              <td class="num">{{ fmtUsd(totalMin()) }}</td>
+              <td></td>
+              <td class="num">100.0%</td>
+              <td class="num">{{ interest().length ? '100.0%' : '—' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <app-payment-planner [accounts]="accounts()" />
+  }
+
+  @if (editor(); as e) {
+    <app-account-form
+      [account]="e.mode === 'edit' ? e.account : null"
+      (saved)="save($event)"
+      (closed)="editor.set(null)"
+    />
+  }
+
+  @if (pendingDelete(); as a) {
+    <app-confirm-dialog
+      heading="Delete account?"
+      [message]="'Delete ' + a.name + ' (' + fmtUsd(a.balance) + ')? This cannot be undone.'"
+      (confirmed)="confirmDelete()"
+      (closed)="pendingDelete.set(null)"
+    />
+  }
+
+  <footer class="site-footer">© Charles R. Clark, 2026</footer>
+</main>

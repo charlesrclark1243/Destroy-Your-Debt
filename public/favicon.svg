@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 486 750" width="486" height="750">
+  <title>Angel money bag</title>
+  <desc>A tan money bag tied with a light-brown rope, with a gold circle and green dollar sign, and a gold halo floating above.</desc>
+  <defs>
+    <radialGradient id="bag-shade" cx="0.4" cy="0.45" r="0.7">
+      <stop offset="0" stop-color="#E2C48F"/>
+      <stop offset="1" stop-color="#C9A266"/>
+    </radialGradient>
+    <linearGradient id="gold-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD84D"/>
+      <stop offset="1" stop-color="#E8B21E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Halo -->
+  <ellipse cx="243" cy="58" rx="118" ry="28" fill="none" stroke="#D99A12" stroke-width="22"/>
+  <ellipse cx="243" cy="58" rx="118" ry="28" fill="none" stroke="url(#gold-shade)" stroke-width="15"/>
+
+  <g transform="translate(0,110)" stroke="#8A6435" stroke-width="5" stroke-linejoin="round">
+    <!-- Gathered top (tuft) -->
+    <path fill="url(#bag-shade)" d="M200,176 C190,140 155,105 118,68 Q140,38 170,52 Q192,10 222,36 Q245,4 268,36 Q296,10 316,52 Q346,38 368,68 C332,105 298,140 288,176 Z"/>
+    <!-- Fabric folds in the gathered top -->
+    <path fill="none" stroke="#A67F4A" stroke-width="3" stroke-linecap="round" d="M214,166 C205,130 188,95 170,58 M243,164 C243,120 243,80 245,40 M272,166 C281,130 298,95 314,58"/>
+    <!-- Bag body -->
+    <path fill="url(#bag-shade)" d="M188,178 C115,225 40,330 15,520 C5,600 40,630 92,630 L394,630 C446,630 481,600 471,520 C446,330 371,225 300,176 Z"/>
+    <!-- Gold coin circle -->
+    <circle cx="243" cy="410" r="125" fill="url(#gold-shade)" stroke="#C98F10" stroke-width="6"/>
+    <!-- Rope tie -->
+    <path fill="#A67B47" d="M184,170 C220,160 268,158 304,164 C312,166 312,186 304,188 C268,182 220,184 186,194 C176,196 174,172 184,170 Z"/>
+    <path fill="none" stroke="#7A552A" stroke-width="3" d="M205,168 L212,190 M228,163 L234,186 M251,161 L256,184 M274,161 L278,184 M296,163 L298,186"/>
+  </g>
+
+  <!-- Dollar sign -->
+  <g transform="translate(0,110)" fill="none" stroke="#1E8A3C" stroke-linecap="butt">
+    <line x1="243" y1="332" x2="243" y2="490" stroke-width="13"/>
+    <path stroke-width="27" d="M284,372 C270,350 208,344 206,382 C204,414 282,404 282,444 C282,482 214,478 200,456"/>
+  </g>
+</svg>

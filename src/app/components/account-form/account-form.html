@@ -1,0 +1,68 @@
+<dialog #dialog class="modal" (close)="onDialogClose()" (click)="onBackdrop($event)" aria-labelledby="af-title">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="modal-inner">
+    <header>
+      <h2 id="af-title">{{ account() ? 'Update account' : 'Add account' }}</h2>
+      <button type="button" class="icon-btn" (click)="close()" aria-label="Close">×</button>
+    </header>
+
+    <div class="grid">
+      <label class="full">
+        <span>Account name</span>
+        <input formControlName="name" placeholder="e.g. Sapphire Visa" autocomplete="off" />
+        @if (invalid('name')) { <small class="err">Name is required.</small> }
+      </label>
+
+      <label>
+        <span>Current balance ($)</span>
+        <input type="number" formControlName="balance" min="0" step="0.01" inputmode="decimal" />
+        @if (invalid('balance')) { <small class="err">Enter a balance of $0 or more.</small> }
+      </label>
+
+      <label>
+        <span>Interest rate (APR %)</span>
+        <input type="number" formControlName="apr" min="0" max="100" step="0.01" inputmode="decimal" />
+        @if (invalid('apr')) { <small class="err">Enter an APR between 0 and 100.</small> }
+      </label>
+
+      <label class="full">
+        <span>Interest compounding</span>
+        <select formControlName="compounding">
+          @for (o of compoundingOptions; track o.value) {
+            <option [value]="o.value">{{ o.label }}</option>
+          }
+        </select>
+        <small class="hint">
+          Check your card agreement for the "daily periodic rate". If unsure, leave it on daily ÷ 365.
+          @if (effectiveRate(); as r) { Effective annual rate: <strong>{{ r }}</strong>. }
+        </small>
+      </label>
+
+      <label>
+        <span>Total line of credit ($)</span>
+        <input type="number" formControlName="creditLimit" min="0" step="0.01" inputmode="decimal" />
+        @if (invalid('creditLimit')) { <small class="err">Enter a credit limit of $0 or more.</small> }
+      </label>
+
+      <label>
+        <span>Minimum payment ($) <em>optional</em></span>
+        <input type="number" formControlName="minPayment" min="0" step="0.01" inputmode="decimal" />
+        @if (invalid('minPayment')) { <small class="err">Must be $0 or more.</small> }
+      </label>
+
+      <label>
+        <span>Payment due day <em>optional</em></span>
+        <input type="number" formControlName="dueDay" min="1" max="31" step="1" placeholder="1–31" />
+        @if (invalid('dueDay')) { <small class="err">Enter a day from 1 to 31.</small> }
+      </label>
+    </div>
+
+    @if (overLimit()) {
+      <p class="note warn">⚠ Balance is over the credit limit.</p>
+    }
+
+    <footer>
+      <button type="button" class="btn" (click)="close()">Cancel</button>
+      <button type="submit" class="btn primary">{{ account() ? 'Save changes' : 'Add account' }}</button>
+    </footer>
+  </form>
+</dialog>

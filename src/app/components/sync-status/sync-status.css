@@ -1,0 +1,11 @@
+:host { display: block; }
+.sync { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 0.875rem; color: var(--text-secondary); }
+.text { line-height: 1.4; }
+.icon { font-size: 0.75rem; margin-right: 2px; }
+.icon.good { color: var(--good-text); }
+.icon.warn { color: var(--serious); }
+.icon.critical { color: var(--critical-text); }
+.spin { display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+.btn.small { margin-left: 4px; }
