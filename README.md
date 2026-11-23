@@ -1,23 +1,54 @@
 # Destroy Your Debt Dashboard
 
-A local Angular dashboard for tracking credit card debt.
+A credit card debt dashboard that shows where your debt and interest come from, and plans the
+cheapest way to pay it off. It runs entirely in your browser, with optional sync through your
+own Google Drive.
 
-## Run it
+**Live site:** https://destroy-your-debt.com
 
-Requires Node.js 20.19+ (or 22.12+).
+## Features
+
+- **Accounts:** add, update and delete cards with balance, APR, compounding method, credit line,
+  minimum payment and due day. Shows utilization per card and overall, and flags cards over
+  their limit.
+- **Summary:** total debt, utilization, balance-weighted average APR, next statement's interest,
+  and total minimum payments.
+- **Two charts:** each card's share of your total **debt**, and each card's share of next
+  statement's **interest**.
+- **Payment planner:** splits what you can pay each month across your cards using one of three
+  strategies, projects month by month until you're debt-free, and compares the strategies. Handles
+  months with a different amount, such as a bonus or a raise.
+- **Google Drive sync (optional):** your accounts and planner settings follow you to any browser
+  or device where you sign in with the same Google account.
+- Works on phones, and in light and dark mode.
+
+## Your data and privacy
+
+- There's no backend server. Everything is calculated in your browser.
+- Without signing in, your data is stored only in your browser (`localStorage`) and never leaves
+  your device. Clearing the browser's site data erases it, and each browser and device has its
+  own separate copy.
+- With Google sync, your data is also saved to a hidden app folder in **your own** Google Drive.
+  The site's owner can't read it. To see or delete it: Google Drive → Settings → Manage apps.
+- On a shared computer, use **Sign out → Remove from this browser** to clear your data from it.
+
+## Run it locally
+
+Requires Node.js 22.22.3+, 24.15+ or 26+ (`node -v` to check).
 
 ```bash
 npm install
 npm start          # then open http://localhost:4200
 ```
 
-Run `npm test` for the unit tests, and `npm run build` for a static build in `dist/`.
+| Command | What it does |
+|---|---|
+| `npm start` | Development server with live reload at http://localhost:4200 |
+| `npm test -- --watch=false` | Runs the unit tests once |
+| `npm run build` | Production build in `dist/debt-dashboard/browser/` |
+| `./deploy.sh` | Tests, builds and publishes to AWS (see [Deploying](#deploying)) |
 
-Data is saved in your browser's `localStorage`. Without sync, nothing leaves your machine,
-and clearing the browser's site data erases it. To keep data across browsers and devices,
-turn on Google Drive sync (below).
-
-## Charts
+## How the numbers work
 
 With account balances d₁…dₙ and effective annual rates r₁…rₙ (as decimals):
 
@@ -26,10 +57,10 @@ With account balances d₁…dₙ and effective annual rates r₁…rₙ (as dec
 | Share of total debt | sᵢ = dᵢ / D, where D = Σ dⱼ |
 | Share of next statement's interest | sᵢ = mᵢ / Σ mⱼ, where mᵢ = dᵢ((1 + rᵢ)^(1/12) − 1) |
 
-The second chart measures **interest, not debt**: mᵢ is the interest balance i accrues over
-the next month (1/12 year) using its own compounding, so each slice is that account's share of
-your next statement's interest. 0% APR accounts accrue nothing and are left out of this chart
-(they're listed under it).
+The second chart measures **interest, not debt**: mᵢ is the interest balance i accrues over the
+next month (1/12 year) using its own compounding. 0% APR accounts accrue nothing, so they're left
+out of this chart and listed under it. The "next statement's interest" figure in the summary is
+Σ mᵢ, the total shown in the middle of the interest chart, assuming no payment is made.
 
 ### Compounding
 
@@ -41,12 +72,12 @@ Each account has a compounding method, which turns its nominal APR into the effe
 | Daily ÷ 360 | (1 + APR/360)^365 − 1 | Some issuers; slightly higher |
 | Monthly | (1 + APR/12)^12 − 1 | Less common |
 
-The "next statement's interest" figure in the summary is Σ mᵢ, the same total shown in the middle of the interest chart.
+Check your card agreement for the "daily periodic rate" if you're not sure.
 
 ## Payment planner
 
-Enter how much you can pay each month and pick a strategy. Every strategy pays all minimums
-first; they differ in where the rest goes:
+Enter a regular monthly amount and pick a strategy. Every strategy pays all minimums first; they
+differ in where the rest goes:
 
 | Strategy | Where the extra goes |
 |---|---|
@@ -54,81 +85,141 @@ first; they differ in where the rest goes:
 | **Snowball** | Smallest balance first, so whole cards get paid off sooner |
 | **Level the charges** | The card with the biggest monthly interest charge (balance × monthly rate) until its charge is down to the next card's, then both together, and so on |
 
-Set a regular monthly amount, then add any months that will be different: **Only in** a month
-(say, a $1,500 bonus in March) or **Every month from** a month on (say, $600 a month from
-January). A one-off overrides an ongoing change for its month.
+Add any months that will be different: **Only in** a month (say, a $1,500 bonus in March) or
+**Every month from** a month on (say, $600 a month from January). A one-off overrides an ongoing
+change for its month.
 
-The planner shows this month's payment for each card and projects your amounts month by month
-until you're debt-free: total interest, the debt-free month (the month of your last payment),
-when each card is paid off, and a month-by-month table of what to pay each card. It also
-compares all three strategies with your amounts and marks the cheapest. Avalanche always has
-the lowest total interest and finishes soonest, with steady or varying amounts (the unit tests
-check this on hundreds of random sets of cards); the others trade some interest for other goals.
-Money paid earlier saves more than the same money paid later, so a lump sum is worth applying
-as soon as you have it.
+The planner shows:
+
+- this month's payment for each card;
+- total interest until debt-free and the debt-free month (the month of your last payment);
+- the month each card is paid off;
+- a month-by-month table of what to pay each card;
+- all three strategies compared with your amounts, with the cheapest marked.
+
+Avalanche always has the lowest total interest and finishes soonest, with steady or varying
+amounts. The unit tests check this on hundreds of random sets of cards. The other strategies
+trade some interest for other goals. Money paid earlier saves more than the same money paid
+later, so a lump sum is worth applying as soon as you have it.
 
 If this month's amount doesn't cover all minimums, the planner warns you, covers minimums in the
 strategy's order, and skips the projection. If a later month doesn't cover the minimums due then,
-the projection stops at that month and says which one. It assumes payments post at the start of the
-billing cycle, rates and minimums stay the same, and there are no new charges. It doesn't model
-fees, promotional rates ending, or rewards. The amounts, changes and strategy are saved with your
-accounts, so they sync through Google Drive too (the most recent change wins).
+the projection stops at that month and says which one.
 
-## Google Drive sync (optional)
+**Assumptions:** payments post at the start of the billing cycle, rates and minimums stay the
+same, and there are no new charges. The planner doesn't model fees, promotional rates ending
+(especially deferred-interest offers), or rewards.
 
-Signing in with Google stores your accounts in a hidden app folder in **your own** Google Drive,
-so they follow you to any browser or device where you sign in with the same Google account.
-There is no backend: the app talks to Google directly from the browser.
+## Google Drive sync
 
-- Each person's data goes in their own Drive. The app's owner can't read it.
-- The folder is hidden in Drive's file list. To see or delete it: Drive → Settings → Manage apps.
-- Changes upload a moment after you make them. Other devices pick them up when the app
-  loads or comes back into focus, and about once a minute while it's open.
-- Conflicts are resolved per account: the most recent edit of each card wins, and deletions
-  are remembered so an old copy on another device can't bring a card back.
-- Google's access tokens last about an hour. When one expires, sync pauses (your changes are
-  still saved in the browser) until you click **Reconnect**.
+Click **Sign in with Google to sync** in the header. The app talks to Google directly from the
+browser; there's no backend.
 
-### Setup (one time, free)
+- Changes upload a moment after you make them. Other devices pick them up when the app loads or
+  comes back into focus, and about once a minute while it's open.
+- Conflicts are resolved per account: the most recent edit of each card wins, and deletions are
+  remembered so an old copy on another device can't bring a card back. Planner settings sync as
+  one unit, and the most recent change wins.
+- The first time you sign in, if both the browser and your Drive already have accounts, you
+  choose whether to merge them or use the Drive copy.
+- Google's access tokens last about an hour. When one expires, sync pauses (your changes are still
+  saved in the browser) until you click **Reconnect**.
+- The sign-in window is a pop-up, so allow pop-ups for the site. On iPhone, check
+  Settings → Safari → Block Pop-ups.
 
-1. Open https://console.cloud.google.com and create a project (e.g. "Debt Dashboard").
-2. **APIs & Services → Library**: find **Google Drive API** and click **Enable**.
+### Google setup
+
+The OAuth client ID is in `src/app/core/sync-config.ts`. It isn't a secret: Google only accepts
+it from the origins registered for it (`https://destroy-your-debt.com` and
+`http://localhost:4200`). With an empty ID, the sign-in button is hidden and the app never
+contacts Google.
+
+To run your own copy at a different address, create your own client ID (free):
+
+1. Open https://console.cloud.google.com and create a project.
+2. **APIs & Services → Library:** enable the **Google Drive API**. You don't need to create
+   credentials there.
 3. **Google Auth Platform** (called "OAuth consent screen" in older versions of the console):
-   - Fill in an app name and your email. For audience, choose **External**.
-   - Under **Data access**, add the scope `https://www.googleapis.com/auth/drive.appdata`.
-   - Under **Audience**, leave the app in **Testing** and add every Google account that will
-     use it as a **test user** (up to 100). This avoids Google's app review. When signing
-     in, you'll see a "Google hasn't verified this app" notice: click **Continue**.
-4. **Clients → Create client**, type **Web application**. Under **Authorized JavaScript
-   origins**, add every address you'll open the app from, for example:
-   - `http://localhost:4200`
-   - `https://your-cloudfront-domain.example.com` (HTTPS is required for anything except localhost)
+   - **Branding:** set an app name and support email, and add your domain under
+     **Authorized domains**.
+   - **Audience:** choose **External**, leave the app in **Testing**, and add every Google
+     account that will use it as a **test user** (up to 100). While in Testing, sign-in shows a
+     "Google hasn't verified this app" notice; click **Continue**.
+   - **Data access:** add the scope `https://www.googleapis.com/auth/drive.appdata`.
+4. **Clients → Create client:** choose **Web application**, and under **Authorized JavaScript
+   origins** add every address you'll open the app from, such as `http://localhost:4200` and
+   `https://your-domain.example`. No redirect URIs are needed. Ignore the client secret; the app
+   doesn't use it.
+5. Put the client ID in `src/app/core/sync-config.ts`.
 
-   No redirect URIs are needed.
-5. Copy the client ID (it ends in `.apps.googleusercontent.com`) into
-   `src/app/core/sync-config.ts`:
+## Deploying
 
-   ```ts
-   export const GOOGLE_CLIENT_ID = '1234567890-abc123.apps.googleusercontent.com';
-   ```
+The site is static files served from a private **S3** bucket through **CloudFront** (HTTPS),
+with the domain registered in **Route 53** and a free certificate from **AWS Certificate
+Manager**.
 
-   The client ID isn't a secret, so it's fine to commit it and ship it in the build.
-6. Restart `npm start` and click **Sign in with Google to sync**. If the popup doesn't
-   appear, allow pop-ups for the site. Content blockers can also block `accounts.google.com`.
+To publish the local code:
 
-With `GOOGLE_CLIENT_ID` left empty, the app never contacts Google and works browser-only.
+```bash
+./deploy.sh              # test, build, upload, clear the CloudFront cache
+./deploy.sh --dry-run    # show what would change, without changing anything
+./deploy.sh --help       # all options
+```
 
-## Code layout
+The script:
 
-- `src/app/core/debt-math.ts`: all calculations (unit-tested in `debt-math.spec.ts`)
-- `src/app/core/account.store.ts`: account state and persistence
-- `src/app/core/payment-plan.ts`: the payment strategies and payoff projection (unit-tested)
-- `src/app/core/payment-schedule.ts`: monthly amounts with one-off and ongoing changes (unit-tested)
-- `src/app/components/payment-planner/`: the planner section
-- `src/app/core/sync-merge.ts`: how two copies of the data are combined (unit-tested)
-- `src/app/core/drive-sync.service.ts`: Google sign-in and Drive sync
-- `src/app/core/sync-config.ts`: your Google OAuth client ID
-- `src/app/components/sync-status/`: sync status, sign-in and sign-out in the header
-- `src/app/components/donut-chart/`: SVG donut chart, no chart library needed
-- `src/app/components/account-form/`: add/update dialog
-- `src/app/app.*`: dashboard layout, summary tiles, accounts table
+1. checks that the AWS CLI is signed in and the bucket is reachable;
+2. runs the tests, then builds;
+3. uploads the new JavaScript and CSS first, then `index.html` and the icons, then removes the
+   previous build's files, so visitors never get a page that points at missing files;
+4. clears the CloudFront cache and waits for that to finish.
+
+It uses the `debt-dashboard` bucket and finds the CloudFront distribution from
+`destroy-your-debt.com`. Override these with environment variables, for example
+`BUCKET=my-bucket DOMAIN=example.com ./deploy.sh` or `DISTRIBUTION_ID=E123ABC ./deploy.sh`.
+Add `AWS_PROFILE=name` to use a named AWS CLI profile.
+
+**Caching:** JavaScript and CSS file names change with every build, so they're cached for a year.
+`index.html` and the icons use `no-cache`, so visitors always get the latest version.
+
+### One-time AWS setup
+
+1. **S3:** create a bucket and leave **Block Public Access** on. Don't enable static website
+   hosting.
+2. **CloudFront:** create a distribution with the bucket as an **Amazon S3** origin, using
+   **origin access control**. Use these settings:
+   - **Viewer protocol policy:** Redirect HTTP to HTTPS.
+   - **Cache policy:** CachingOptimized.
+   - **Response headers policy:** SecurityHeadersPolicy.
+   - **Default root object:** `index.html`.
+
+   Make sure the bucket policy lets the distribution read the bucket. The console offers to add
+   it.
+3. **Domain:** register it in Route 53, request a certificate in **us-east-1**, add the domain
+   to the distribution as an alternate domain name, and create **A** and **AAAA** alias records
+   pointing to the distribution.
+4. **Google:** add the site's `https://` address to the OAuth client's authorized JavaScript
+   origins.
+
+## Project layout
+
+| Path | What's there |
+|---|---|
+| `src/app/core/debt-math.ts` | Rates, compounding, shares, summary figures |
+| `src/app/core/payment-plan.ts` | Payment strategies and the payoff projection |
+| `src/app/core/payment-schedule.ts` | Monthly amounts with one-off and ongoing changes |
+| `src/app/core/account.store.ts` | Accounts and planner settings, saved to `localStorage` |
+| `src/app/core/sync-merge.ts` | How two copies of the data are combined when syncing |
+| `src/app/core/drive-sync.service.ts` | Google sign-in and Google Drive sync |
+| `src/app/core/sync-config.ts` | The Google OAuth client ID |
+| `src/app/components/` | Donut chart, account form, payment planner, sync status, dialogs |
+| `src/app/app.*` | Page layout, summary tiles, accounts table |
+| `public/` | Icons (`favicon.svg`, `favicon.ico`) |
+| `deploy.sh` | Build and publish to S3 and CloudFront |
+
+The calculation, planning, scheduling, sync-merge and storage code is unit-tested, in the
+`*.spec.ts` files next to each source file.
+
+## License
+
+Copyright © 2026 Charles R. Clark. All rights reserved.
