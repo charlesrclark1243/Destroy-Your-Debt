@@ -102,6 +102,9 @@
                 </th>
                 <td class="num">
                   {{ fmtUsd(a.balance) }}
+                  @if (a.bank; as bank) {
+                    <span class="subline" [title]="bank.label">from bank · {{ shortDate(bank.balanceDate ?? bank.appliedAt) }}</span>
+                  }
                   @if (a.monthlySpending) {
                     <span class="subline">+{{ fmtUsd(a.monthlySpending) }}/mo new charges</span>
                   }
@@ -154,6 +157,8 @@
         </table>
       </div>
     </section>
+
+    <app-bank-sync />
 
     <app-payment-planner [accounts]="accounts()" />
   }

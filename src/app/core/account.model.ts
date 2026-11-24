@@ -27,6 +27,20 @@ export interface Promotion {
   deferred: boolean;
 }
 
+/** Link between a card and an account at SimpleFIN (via the Destroy Your Debt server). */
+export interface BankLink {
+  /** SimpleFIN's id for the account. */
+  accountId: string;
+  /** What the bank calls it, e.g. "Discover · Discover it Card". */
+  label: string;
+  /** True when this bank reports the amount owed as a positive number (most report it as negative). */
+  positive: boolean;
+  /** When the bank's balance was current (ms since epoch), if it said. */
+  balanceDate: number | null;
+  /** When the balance was last updated from the bank (ms since epoch). */
+  appliedAt: number;
+}
+
 /** A single credit card / revolving credit account. */
 export interface CreditAccount {
   id: string;
@@ -39,6 +53,8 @@ export interface CreditAccount {
   promo?: Promotion | null;
   /** Expected new charges per month, in dollars (0 if not tracked). */
   monthlySpending?: number;
+  /** Set when the balance is updated from a linked bank account. */
+  bank?: BankLink | null;
   /** How the APR compounds. */
   compounding: Compounding;
   /** Total line of credit, in dollars. */

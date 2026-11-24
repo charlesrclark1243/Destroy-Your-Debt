@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import {
   AccountDraft,
+  BankLink,
   COMPOUNDING_OPTIONS,
   Compounding,
   CreditAccount,
@@ -73,6 +74,37 @@ export class AccountStore {
     this._planner.set({ ...prev, ...patch, updatedAt: Math.max(Date.now(), prev.updatedAt + 1) });
     this.persist();
     this._localEdits.update((n) => n + 1);
+  }
+
+  /**
+   * Applies balances from the bank in one change: each updated card gets its new
+   * balance and bank link, and any other card that was linked to the same bank
+   * account is unlinked. Synced like any other edit.
+   */
+  applyBankBalances(updates: { id: string; balance: number; bank: BankLink }[]): void {
+    if (!updates.length) return;
+    const now = Date.now();
+    const byId = new Map(updates.map((u) => [u.id, u]));
+    const linkedNow = new Set(updates.map((u) => u.bank.accountId));
+    this.commit(
+      (list) =>
+        list.map((a) => {
+          const u = byId.get(a.id);
+          if (u) return { ...a, balance: Math.max(0, u.balance), bank: u.bank, updatedAt: Math.max(now, a.updatedAt + 1) };
+          if (a.bank && linkedNow.has(a.bank.accountId)) return { ...a, bank: null, updatedAt: Math.max(now, a.updatedAt + 1) };
+          return a;
+        }),
+      this._deleted(),
+    );
+  }
+
+  /** Removes a card's bank link (its balance stays as it is). */
+  unlinkBank(id: string): void {
+    const now = Date.now();
+    this.commit(
+      (list) => list.map((a) => (a.id === id && a.bank ? { ...a, bank: null, updatedAt: Math.max(now, a.updatedAt + 1) } : a)),
+      this._deleted(),
+    );
   }
 
   loadSample(): void {

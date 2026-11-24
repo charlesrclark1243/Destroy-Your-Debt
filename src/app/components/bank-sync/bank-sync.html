@@ -1,0 +1,181 @@
+<details class="card bank" [open]="bank.paired()">
+  <summary>
+    <span class="eyebrow">Bank sync</span>
+    <span class="title">Update balances from your bank</span>
+    <span class="status">
+      @switch (bank.state()) {
+        @case ('unpaired') { Not connected }
+        @case ('working') { Working… }
+        @case ('error') { <span class="critical">Problem</span> }
+        @default { Connected to the server on this computer }
+      }
+    </span>
+  </summary>
+
+  @if (bank.error(); as err) {
+    <p class="alert" role="alert"><span class="icon critical" aria-hidden="true">▲</span> {{ err }}</p>
+  }
+
+  @if (!bank.paired()) {
+    <div class="intro">
+      <p>
+        Balances can come straight from your bank through <strong>SimpleFIN</strong>, using the
+        <strong>Destroy Your Debt server</strong>: a small program that runs on this computer and keeps your SimpleFIN access
+        private. Your other devices get the new balances through Google sync.
+      </p>
+      <ol>
+        <li>Install the server and, one time, run <code>npm run setup</code> in its folder to paste your SimpleFIN setup token.</li>
+        <li>Start it with <code>npm start</code>. It prints a pairing code.</li>
+        <li>Enter the code here. If the browser asks to allow access to devices on your local network, allow it.</li>
+      </ol>
+      <form class="pair" (submit)="$event.preventDefault(); pair()">
+        <label for="pair-code">Pairing code</label>
+        <input
+          id="pair-code"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          placeholder="123-456"
+          [value]="code()"
+          (input)="code.set($any($event.target).value)"
+        />
+        <button type="submit" class="btn primary" [disabled]="bank.state() === 'working' || code().replace('-', '').length < 6">
+          Connect
+        </button>
+      </form>
+      <p class="muted small">Installation and setup are in the Destroy Your Debt server's README.</p>
+    </div>
+  } @else {
+    <div class="actions">
+      <button type="button" class="btn primary" (click)="update(false)" [disabled]="bank.state() === 'working'">
+        Check balances
+      </button>
+      <button type="button" class="btn" (click)="update(true)" [disabled]="bank.state() === 'working'" title="Ask SimpleFIN for the latest, instead of the server's copy from the last few hours">
+        Refresh from bank
+      </button>
+      <button type="button" class="btn danger-ghost" (click)="bank.unpair()">Disconnect this browser</button>
+      @if (bank.fetchedAt(); as at) {
+        <span class="muted small">Balances as of {{ time(at) }}{{ bank.cached() ? ' (saved copy)' : '' }}</span>
+      }
+    </div>
+
+    @for (msg of bank.bankErrors(); track msg) {
+      <p class="alert"><span class="icon warn" aria-hidden="true">▲</span> From SimpleFIN: {{ msg }}</p>
+    }
+
+    @if (bank.accounts(); as accounts) {
+      @if (accounts.length === 0) {
+        <p class="muted">SimpleFIN didn't return any accounts. Check your connections at bridge.simplefin.org.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Bank account</th>
+                <th scope="col" class="num">Bank shows</th>
+                <th scope="col">Card in this dashboard</th>
+                <th scope="col" class="num">Amount owed</th>
+                <th scope="col" class="num">Now in dashboard</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of rows().main; track a.id) {
+                @let choice = choices().get(a.id);
+                <tr [class.unlinked]="!choice?.cardId">
+                  <th scope="row">
+                    {{ label(a) }}
+                    @if (a.balanceDate) { <span class="subline">as of {{ date(a.balanceDate) }}</span> }
+                  </th>
+                  <td class="num">{{ fmtUsd(a.balance) }}</td>
+                  <td>
+                    <select [attr.aria-label]="'Card for ' + label(a)" (change)="choose(a, $any($event.target).value)">
+                      <option value="" [selected]="!choice?.cardId">Not linked</option>
+                      @for (c of cards(); track c.id) {
+                        <option [value]="c.id" [selected]="choice?.cardId === c.id" [disabled]="takenByOther(a, c.id)">{{ c.name }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td class="num">
+                    @if (choice?.cardId) {
+                      <strong>{{ fmtUsd(owed(a)) }}</strong>
+                      <button type="button" class="link small" (click)="flip(a)" [attr.aria-label]="'Flip the sign for ' + label(a)">
+                        flip sign
+                      </button>
+                    } @else {
+                      <span class="muted">—</span>
+                    }
+                  </td>
+                  <td class="num">
+                    @for (c of cards(); track c.id) {
+                      @if (c.id === choice?.cardId) { {{ fmtUsd(c.balance) }} }
+                    }
+                  </td>
+                </tr>
+              }
+              @if (showOthers()) {
+                @for (a of rows().others; track a.id) {
+                  @let choice = choices().get(a.id);
+                  <tr [class.unlinked]="!choice?.cardId">
+                    <th scope="row">
+                      {{ label(a) }}
+                      @if (a.balanceDate) { <span class="subline">as of {{ date(a.balanceDate) }}</span> }
+                    </th>
+                    <td class="num">{{ fmtUsd(a.balance) }}</td>
+                    <td>
+                      <select [attr.aria-label]="'Card for ' + label(a)" (change)="choose(a, $any($event.target).value)">
+                        <option value="" [selected]="!choice?.cardId">Not linked</option>
+                        @for (c of cards(); track c.id) {
+                          <option [value]="c.id" [selected]="choice?.cardId === c.id" [disabled]="takenByOther(a, c.id)">{{ c.name }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td class="num">
+                      @if (choice?.cardId) {
+                        <strong>{{ fmtUsd(owed(a)) }}</strong>
+                        <button type="button" class="link small" (click)="flip(a)" [attr.aria-label]="'Flip the sign for ' + label(a)">
+                          flip sign
+                        </button>
+                      } @else {
+                        <span class="muted">—</span>
+                      }
+                    </td>
+                    <td class="num">
+                      @for (c of cards(); track c.id) {
+                        @if (c.id === choice?.cardId) { {{ fmtUsd(c.balance) }} }
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (rows().others.length) {
+          <button type="button" class="link small toggle" (click)="showOthers.set(!showOthers())">
+            {{ showOthers() ? 'Hide' : 'Show' }} {{ rows().others.length }} other
+            {{ rows().others.length === 1 ? 'account' : 'accounts' }} (investment, checking, savings and similar)
+          </button>
+        }
+        @for (a of unlinkedCards(); track a.id) {
+          <p class="note small">
+            <strong>{{ label(a) }}</strong> looks like a card that isn't in the dashboard yet. Add it with
+            <strong>+ Add account</strong>, then check balances again to link it.
+          </p>
+        }
+        <p class="muted small">
+          Check that "Amount owed" matches what you owe on each card. Most banks report card debt as a negative number; if one
+          shows the wrong amount, use "flip sign". Accounts that aren't cards (like checking) can stay "Not linked".
+        </p>
+        <div class="actions">
+          <button type="button" class="btn primary" (click)="apply()" [disabled]="updates().length === 0">
+            Update {{ updates().length }} {{ updates().length === 1 ? 'card' : 'cards' }}
+          </button>
+          @if (applied(); as msg) {
+            <span class="good small"><span aria-hidden="true">✓</span> {{ msg }}</span>
+          } @else if (updates().length && changed().length === 0) {
+            <span class="muted small">Balances already match.</span>
+          }
+        </div>
+      }
+    }
+  }
+</details>

@@ -17,12 +17,13 @@ import { AccountForm } from './components/account-form/account-form';
 import { ConfirmDialog } from './components/confirm-dialog/confirm-dialog';
 import { SyncStatus } from './components/sync-status/sync-status';
 import { PaymentPlanner } from './components/payment-planner/payment-planner';
+import { BankSyncPanel } from './components/bank-sync/bank-sync';
 
 type EditorState = { mode: 'add' } | { mode: 'edit'; account: CreditAccount } | null;
 
 @Component({
   selector: 'app-root',
-  imports: [DonutChart, AccountForm, ConfirmDialog, SyncStatus, PaymentPlanner],
+  imports: [DonutChart, AccountForm, ConfirmDialog, SyncStatus, BankSyncPanel, PaymentPlanner],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -82,6 +83,10 @@ export class App {
 
   protected ear(a: CreditAccount): number {
     return effectiveAnnualRate(a.apr, a.compounding);
+  }
+
+  protected shortDate(ms: number): string {
+    return new Date(ms).toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 
   protected promoEnded(a: CreditAccount): boolean {
