@@ -22,7 +22,8 @@ own Google Drive.
 - **Google Drive sync (optional):** your accounts and planner settings follow you to any browser
   or device where you sign in with the same Google account.
 - **Bank sync (optional):** update card balances straight from your bank through SimpleFIN, using
-  the separate [Destroy Your Debt server](#bank-sync) running on your computer.
+  the separate [Destroy Your Debt server](https://github.com/charlesrclark1243/Destroy-Your-Debt-Server) running on your computer (see
+  [Bank sync](#bank-sync)).
 - Works on phones, and in light and dark mode.
 
 ## Your data and privacy
@@ -34,8 +35,9 @@ own Google Drive.
 - With Google sync, your data is also saved to a hidden app folder in **your own** Google Drive.
   The site's owner can't read it. To see or delete it: Google Drive → Settings → Manage apps.
 - On a shared computer, use **Sign out → Remove from this browser** to clear your data from it.
-- Bank sync keeps your SimpleFIN access in the Destroy Your Debt server on your own computer. The
-  dashboard only receives balances, and its pairing with the server is stored in that browser only.
+- Bank sync keeps your SimpleFIN access in the [Destroy Your Debt server](https://github.com/charlesrclark1243/Destroy-Your-Debt-Server) on your own
+  computer. The dashboard only receives balances, and its pairing with the server is stored in that
+  browser only.
 
 ## Run it locally
 
@@ -188,13 +190,21 @@ To run your own copy at a different address, create your own client ID (free):
 ## Bank sync
 
 Card balances can be updated from your bank through [SimpleFIN Bridge](https://bridge.simplefin.org),
-using the **Destroy Your Debt server**, a separate project that runs on your own computer. The
-server holds your SimpleFIN access, so it never reaches the browser or Google Drive. The dashboard
-asks the server for balances over `http://127.0.0.1:47317`.
+using the **[Destroy Your Debt server](https://github.com/charlesrclark1243/Destroy-Your-Debt-Server)**, a separate project that runs on your own
+computer. The server holds your SimpleFIN access, so it never reaches the browser or Google Drive.
+The dashboard asks the server for balances over `http://127.0.0.1:47317`.
 
 In short:
 
-1. Install the server, run `npm run setup` once with a SimpleFIN setup token, then `npm start`.
+1. Get the server and start it (it needs Node.js 22.12+ and no npm packages):
+
+   ```bash
+   git clone https://github.com/charlesrclark1243/Destroy-Your-Debt-Server.git
+   cd Destroy-Your-Debt-Server
+   npm run setup     # one time: paste a SimpleFIN setup token
+   npm start         # prints a pairing code
+   ```
+
 2. In the dashboard, open **Bank sync**, enter the pairing code the server prints, and click
    **Connect**.
 3. Match each bank account to a card, check the amounts (**flip sign** if a bank reports debt as a
@@ -202,7 +212,8 @@ In short:
 
 Updated cards show **from bank** with the bank's date. The new balances sync to your other devices
 through Google Drive like any edit. Cards your bank-data service doesn't support stay manual. Full
-installation, security notes and troubleshooting are in the server's README.
+installation, security notes, troubleshooting and the API are in the
+[server's README](https://github.com/charlesrclark1243/Destroy-Your-Debt-Server#readme).
 
 The server's address is `SERVER_URL` in `src/app/core/bank-sync.service.ts`. The server only answers
 the sites in its `DYD_ORIGINS` setting, which defaults to `https://destroy-your-debt.com` and
@@ -268,7 +279,7 @@ Add `AWS_PROFILE=name` to use a named AWS CLI profile.
 | `src/app/core/sync-merge.ts` | How two copies of the data are combined when syncing |
 | `src/app/core/drive-sync.service.ts` | Google sign-in and Google Drive sync |
 | `src/app/core/sync-config.ts` | The Google OAuth client ID |
-| `src/app/core/bank-sync.service.ts` | Pairing with and fetching balances from the Destroy Your Debt server |
+| `src/app/core/bank-sync.service.ts` | Pairing with and fetching balances from the [Destroy Your Debt server](https://github.com/charlesrclark1243/Destroy-Your-Debt-Server) |
 | `src/app/core/bank-match.ts` | Matching bank accounts to cards and turning bank balances into amounts owed |
 | `src/app/components/` | Donut chart, account form, payment planner, bank sync, sync status, dialogs |
 | `src/app/app.*` | Page layout, summary tiles, accounts table |
